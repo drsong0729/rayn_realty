@@ -888,6 +888,7 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
         <button class="btn btn-outline" onclick="closeListingModal()">取消</button>
         <button class="btn btn-primary" id="listing-save-btn" style="padding:12px 28px">上架</button>
       </div>
+    </div>
   </div>
 </div>
 
@@ -908,7 +909,7 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
 </div>
 
 <!-- LOGIN MODAL -->
-<div class="modal-overlay" id="login-modal" style="display:none">
+<div class="modal-overlay" id="login-modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;align-items:center;justify-content:center;background:rgba(15,34,49,0.6);z-index:9999">
   <div class="modal-box">
     <button onclick="closeLoginModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:4px"><i data-lucide="x" style="width:20px;height:20px"></i></button>
     <h2 style="font:var(--text-h3);margin-bottom:var(--space-5)">管理者登入</h2>
@@ -926,7 +927,14 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
 (function(){
   function openLoginModal(){
     var m=document.getElementById('login-modal');
-    if(m){m.style.display='flex';}
+    if(m){
+      m.style.display='flex';
+      m.style.position='fixed';
+      m.style.top='0';m.style.left='0';m.style.right='0';m.style.bottom='0';
+      m.style.width='100vw';m.style.height='100vh';
+      m.style.alignItems='center';m.style.justifyContent='center';
+      m.style.zIndex='9999';
+    }
     var err=document.getElementById('login-error'); if(err)err.style.display='none';
     var u=document.getElementById('login-user'); if(u)u.value='';
     var p=document.getElementById('login-pass'); if(p)p.value='';
@@ -1134,7 +1142,13 @@ function setAdminUI(on){
 //  LOGIN
 // ══════════════════════════════════════════════════════
 function openLoginModal(){
-  document.getElementById('login-modal').style.display='flex';
+  var m=document.getElementById('login-modal');
+  m.style.display='flex';
+  m.style.position='fixed';
+  m.style.top='0';m.style.left='0';m.style.right='0';m.style.bottom='0';
+  m.style.width='100vw';m.style.height='100vh';
+  m.style.alignItems='center';m.style.justifyContent='center';
+  m.style.zIndex='9999';
   document.getElementById('login-error').style.display='none';
   document.getElementById('login-user').value='';
   document.getElementById('login-pass').value='';
