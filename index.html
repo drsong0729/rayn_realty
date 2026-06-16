@@ -64,7 +64,7 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
 .nav-link.active::after{transform:scaleX(1)}
 .screen{display:none}.screen.active{display:block}
 .blog-card{display:flex;flex-direction:column;gap:12px;padding:var(--space-6);background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);cursor:pointer;transition:box-shadow var(--dur-base),transform var(--dur-base)}.blog-card:hover{box-shadow:0 18px 44px rgba(19,41,58,0.16);transform:translateY(-2px)}
-.modal-overlay{position:fixed;inset:0;background:rgba(15,34,49,0.6);z-index:200;display:flex;align-items:center;justify-content:center;padding:var(--gutter)}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,34,49,0.6);z-index:400;display:flex;align-items:center;justify-content:center;padding:var(--gutter)}
 .modal-box{background:var(--surface-card);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);width:100%;max-width:420px;padding:var(--space-8);position:relative}
 .form-label{font:var(--text-body-sm);font-weight:var(--fw-medium);color:var(--text-secondary);display:block;margin-bottom:6px}
 .form-input{width:100%;font:var(--text-body);color:var(--text-primary);padding:12px 14px;border:1px solid var(--border-default);border-radius:var(--radius-sm);font-family:var(--font-sans);outline:none;transition:border-color var(--dur-fast)}
@@ -251,7 +251,7 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
     </nav>
     <div class="mobile-drawer-footer">
       <button class="btn btn-primary" onclick="navigate('contact');closeDrawer()" style="width:100%;justify-content:center;padding:13px">聯絡洽詢</button>
-      <button class="btn-admin" onclick="openLoginModal();closeDrawer()" style="width:100%;justify-content:center;padding:12px"><i data-lucide="lock" style="width:14px;height:14px"></i>管理者登入</button>
+      <button class="btn-admin" onclick="closeDrawer();setTimeout(openLoginModal,320)" style="width:100%;justify-content:center;padding:12px"><i data-lucide="lock" style="width:14px;height:14px"></i>管理者登入</button>
       <div style="font:var(--text-caption);color:var(--text-tertiary);text-align:center;margin-top:8px">高雄市左營區明誠二路532號</div>
     </div>
   </div>
@@ -499,6 +499,20 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
             <div><label class="form-label">聯絡電話 *</label><input class="form-input" id="cf-phone" type="text" placeholder="09xx-xxx-xxx" required /></div>
           </div>
           <div><label class="form-label">電子郵件</label><input class="form-input" id="cf-email" type="email" placeholder="name@example.com" /></div>
+          <div>
+            <label class="form-label">需求類型 *</label>
+            <div style="display:flex;gap:var(--space-4);flex-wrap:wrap;margin-top:4px">
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:var(--text-body);color:var(--text-primary)">
+                <input type="radio" name="cf-intent" id="cf-intent-buy" value="買屋" required style="accent-color:var(--gold-500);width:16px;height:16px">買屋
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:var(--text-body);color:var(--text-primary)">
+                <input type="radio" name="cf-intent" id="cf-intent-sell" value="賣屋" style="accent-color:var(--gold-500);width:16px;height:16px">賣屋
+              </label>
+              <label style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;font:var(--text-body);color:var(--text-primary)">
+                <input type="radio" name="cf-intent" id="cf-intent-other" value="其他" style="accent-color:var(--gold-500);width:16px;height:16px">其他
+              </label>
+            </div>
+          </div>
           <div><label class="form-label">需求說明</label><textarea class="form-input" id="cf-msg" rows="4" placeholder="想了解的物件、區域或預算…" style="resize:vertical"></textarea></div>
           <button class="btn btn-primary btn-lg" type="submit" style="width:100%;justify-content:center">送出諮詢</button>
         </form>
@@ -507,26 +521,55 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
   </section>
 </div>
 
-<!-- ============ ENQUIRIES (Admin) ============ -->
+<!-- ============ CUSTOMERS (Admin) ============ -->
 <div class="screen" id="screen-enquiries">
   <div style="position:relative;overflow:hidden;background:var(--surface-dark)">
     <div style="position:relative;max-width:var(--container-max);margin:0 auto;padding:var(--space-9) var(--gutter)">
       <span class="eyebrow" style="color:rgba(255,255,255,0.6)">後台管理 · ADMIN</span>
-      <h1 style="font:var(--text-h1);color:#fff;margin-top:8px">聯絡洽詢紀錄</h1>
+      <h1 style="font:var(--text-h1);color:#fff;margin-top:8px">客戶管理</h1>
+      <p style="font:var(--text-body-lg);color:var(--navy-200);margin-top:8px">收集所有透過網站聯絡的潛在客戶資料</p>
     </div>
   </div>
   <section style="max-width:var(--container-max);margin:0 auto;padding:var(--space-10) var(--gutter)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);flex-wrap:wrap;gap:16px">
-      <h2 style="font:var(--text-h2)">所有諮詢記錄</h2>
+    <!-- Stats bar -->
+    <div id="enquiries-stats" style="display:none;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:var(--space-4);margin-bottom:var(--space-7)">
+      <div class="card" style="padding:var(--space-5);text-align:center">
+        <div id="stat-total" style="font-family:var(--font-latin);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);color:var(--brand)">0</div>
+        <div style="font:var(--text-caption);color:var(--text-tertiary);margin-top:4px">總計詢問</div>
+      </div>
+      <div class="card" style="padding:var(--space-5);text-align:center">
+        <div id="stat-buy" style="font-family:var(--font-latin);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);color:var(--gold-600)">0</div>
+        <div style="font:var(--text-caption);color:var(--text-tertiary);margin-top:4px">買屋需求</div>
+      </div>
+      <div class="card" style="padding:var(--space-5);text-align:center">
+        <div id="stat-sell" style="font-family:var(--font-latin);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);color:var(--navy-600)">0</div>
+        <div style="font:var(--text-caption);color:var(--text-tertiary);margin-top:4px">賣屋需求</div>
+      </div>
+      <div class="card" style="padding:var(--space-5);text-align:center">
+        <div id="stat-other" style="font-family:var(--font-latin);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);color:var(--stone-500)">0</div>
+        <div style="font:var(--text-caption);color:var(--text-tertiary);margin-top:4px">其他需求</div>
+      </div>
+    </div>
+    <!-- Filter & actions bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);flex-wrap:wrap;gap:12px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="font:var(--text-h2)">客戶名單</h2>
+        <div id="filter-bar" style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="filter-btn active" data-filter="all" onclick="filterEnquiries('all',this)" style="font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-pill);border:1.5px solid var(--brand);background:var(--brand);color:#fff;cursor:pointer;font-family:var(--font-sans);font-weight:var(--fw-medium)">全部</button>
+          <button class="filter-btn" data-filter="買屋" onclick="filterEnquiries('買屋',this)" style="font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-pill);border:1.5px solid var(--border-default);background:none;color:var(--text-secondary);cursor:pointer;font-family:var(--font-sans);font-weight:var(--fw-medium)">買屋</button>
+          <button class="filter-btn" data-filter="賣屋" onclick="filterEnquiries('賣屋',this)" style="font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-pill);border:1.5px solid var(--border-default);background:none;color:var(--text-secondary);cursor:pointer;font-family:var(--font-sans);font-weight:var(--fw-medium)">賣屋</button>
+          <button class="filter-btn" data-filter="其他" onclick="filterEnquiries('其他',this)" style="font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-pill);border:1.5px solid var(--border-default);background:none;color:var(--text-secondary);cursor:pointer;font-family:var(--font-sans);font-weight:var(--fw-medium)">其他</button>
+        </div>
+      </div>
       <button class="btn btn-outline" onclick="clearEnquiries()" style="display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-sm)"><i data-lucide="trash-2" style="width:15px;height:15px"></i>清除全部</button>
     </div>
     <div id="enquiries-list"></div>
     <div id="enquiries-empty" style="text-align:center;padding:var(--space-10) 0">
       <span style="width:64px;height:64px;border-radius:var(--radius-pill);background:var(--surface-sunken);display:inline-flex;align-items:center;justify-content:center;margin:0 auto 20px">
-        <i data-lucide="inbox" style="width:28px;height:28px;color:var(--text-tertiary)"></i>
+        <i data-lucide="users" style="width:28px;height:28px;color:var(--text-tertiary)"></i>
       </span>
-      <h3 style="font:var(--text-h3);color:var(--text-secondary);margin-bottom:12px">尚無諮詢紀錄</h3>
-      <p style="font:var(--text-body);color:var(--text-tertiary)">訪客透過聯絡表單提交的資料將顯示於此。</p>
+      <h3 style="font:var(--text-h3);color:var(--text-secondary);margin-bottom:12px">尚無客戶資料</h3>
+      <p style="font:var(--text-body);color:var(--text-tertiary)">訪客透過聯絡表單送出的資料將顯示於此。</p>
     </div>
   </section>
 </div>
@@ -880,14 +923,14 @@ function navigate(id){
   SCREENS.forEach(s=>{
     const el=document.getElementById('screen-'+s);
     if(el)el.classList.remove('active');
-    const n=document.getElementById('nav-'+s);
+    const n=document.getElementById('nav-'+s)||document.getElementById('nav-'+s+'-desktop');
     if(n)n.classList.remove('active');
     const mn=document.getElementById('mnav-'+s);
     if(mn)mn.classList.remove('active');
   });
   const screenEl=document.getElementById('screen-'+id);
   if(screenEl)screenEl.classList.add('active');
-  const n=document.getElementById('nav-'+id);
+  const n=document.getElementById('nav-'+id)||document.getElementById('nav-'+id+'-desktop');
   if(n)n.classList.add('active');
   const mn=document.getElementById('mnav-'+id);
   if(mn)mn.classList.add('active');
@@ -939,19 +982,40 @@ function setAdminUI(on){
     const el=document.getElementById(id);
     if(el)el.style.display=on?'block':'none';
   });
-  // Admin nav item in drawer
-  let adminNav=document.getElementById('mnav-enquiries-item');
-  if(on&&!adminNav){
+
+  // ── Desktop nav: add/remove 客戶管理 link ──
+  let desktopAdminLink=document.getElementById('nav-enquiries-desktop');
+  if(on&&!desktopAdminLink){
+    const nav=document.getElementById('main-nav');
+    if(nav){
+      const a=document.createElement('a');
+      a.className='nav-link';
+      a.id='nav-enquiries-desktop';
+      a.href='#';
+      a.textContent='客戶管理';
+      a.style.color='rgba(255,255,255,0.9)';
+      a.onclick=(e)=>{e.preventDefault();navigate('enquiries');};
+      // Insert before last nav link
+      nav.appendChild(a);
+    }
+  }else if(!on&&desktopAdminLink){
+    desktopAdminLink.remove();
+  }
+
+  // ── Mobile drawer: add/remove 客戶管理 item ──
+  let drawerAdminNav=document.getElementById('mnav-enquiries-item');
+  if(on&&!drawerAdminNav){
     const nav=document.querySelector('#mobile-drawer nav');
     if(nav){
       const div=document.createElement('div');
       div.className='mobile-nav-link';
       div.id='mnav-enquiries-item';
-      div.innerHTML='諮詢紀錄';
+      div.textContent='客戶管理';
       div.onclick=()=>{navigate('enquiries');closeDrawer();};
       nav.appendChild(div);
     }
-  }else if(!on&&adminNav){adminNav.remove();}
+  }else if(!on&&drawerAdminNav){drawerAdminNav.remove();}
+
   initIcons();
 }
 
@@ -1005,10 +1069,15 @@ function submitForm(e){
   const phone=(document.getElementById('cf-phone')||{value:''}).value.trim();
   const email=(document.getElementById('cf-email')||{value:''}).value.trim();
   const msg=(document.getElementById('cf-msg')||{value:''}).value.trim();
+  const intentEl=document.querySelector('input[name="cf-intent"]:checked');
+  const intent=intentEl?intentEl.value:'未填';
   if(!name||!phone){return;}
-  const record={id:Date.now(),name,phone,email,msg,time:new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'})};
+  const record={id:Date.now(),name,phone,email,msg,intent,time:new Date().toLocaleString('zh-TW',{timeZone:'Asia/Taipei'}),status:'待聯絡'};
   enquiries.push(record);
   saveData('ss_enquiries',enquiries);
+  // Reset radio buttons
+  document.querySelectorAll('input[name="cf-intent"]').forEach(r=>r.checked=false);
+  const form=document.getElementById('contact-form');
   form.style.display='none';
   const t=document.getElementById('contact-thanks');
   t.style.display='flex';initIcons();
@@ -1023,32 +1092,103 @@ function resetForm(){
 // ══════════════════════════════════════════════════════
 //  ENQUIRIES
 // ══════════════════════════════════════════════════════
-function renderEnquiries(){
+function renderEnquiries(filterBy){
+  filterBy=filterBy||'all';
   const list=document.getElementById('enquiries-list');
   const empty=document.getElementById('enquiries-empty');
+  const stats=document.getElementById('enquiries-stats');
   if(!list)return;
   enquiries=loadData('ss_enquiries');
+
+  // Update stats
+  if(stats){
+    const total=enquiries.length;
+    const buy=enquiries.filter(q=>q.intent==='買屋').length;
+    const sell=enquiries.filter(q=>q.intent==='賣屋').length;
+    const other=enquiries.filter(q=>q.intent!=='買屋'&&q.intent!=='賣屋').length;
+    document.getElementById('stat-total').textContent=total;
+    document.getElementById('stat-buy').textContent=buy;
+    document.getElementById('stat-sell').textContent=sell;
+    document.getElementById('stat-other').textContent=other;
+    stats.style.display=total>0?'grid':'none';
+  }
+
   if(enquiries.length===0){list.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  list.innerHTML=enquiries.slice().reverse().map((q,i)=>`
-    <div class="enquiry-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">
-        <div>
-          <span style="font:var(--text-h4);color:var(--text-primary)">${esc(q.name)}</span>
-          <span class="badge badge-gold" style="margin-left:10px">#${enquiries.length-i}</span>
+
+  const filtered=filterBy==='all'?enquiries:enquiries.filter(q=>q.intent===filterBy);
+  if(filtered.length===0){
+    list.innerHTML=`<div style="text-align:center;padding:var(--space-8) 0;color:var(--text-tertiary);font:var(--text-body)">此分類暫無資料</div>`;
+    return;
+  }
+
+  const intentColor={'買屋':'var(--gold-600)','賣屋':'var(--navy-600)','其他':'var(--stone-500)','未填':'var(--stone-400)'};
+  const statusColor={'待聯絡':'var(--warning-600)','已聯絡':'var(--success-600)','已成交':'var(--brand)'};
+
+  list.innerHTML=filtered.slice().reverse().map((q,i)=>{
+    const ic=intentColor[q.intent]||'var(--stone-500)';
+    const sc=statusColor[q.status]||'var(--stone-500)';
+    const num=enquiries.length-enquiries.slice().reverse().findIndex(x=>x.id===q.id);
+    return`
+    <div class="enquiry-card" id="eq-${q.id}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font:var(--text-h4);color:var(--text-primary);font-weight:var(--fw-semibold)">${esc(q.name)}</span>
+          <span style="font-size:var(--fs-xs);font-weight:var(--fw-medium);padding:3px 10px;border-radius:var(--radius-pill);background:${ic}20;color:${ic};border:1px solid ${ic}40">${esc(q.intent||'未填')}</span>
+          <span style="font-size:var(--fs-xs);font-weight:var(--fw-medium);padding:3px 10px;border-radius:var(--radius-pill);background:${sc}18;color:${sc};border:1px solid ${sc}40;cursor:pointer" onclick="cycleStatus(${q.id})">${esc(q.status||'待聯絡')}</span>
         </div>
-        <span style="font:var(--text-caption);color:var(--text-tertiary);font-family:var(--font-mono)">${esc(q.time)}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font:var(--text-caption);color:var(--text-tertiary);font-family:var(--font-mono)">${esc(q.time)}</span>
+          <button onclick="deleteEnquiry(${q.id})" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:4px;display:flex" title="刪除"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
+        </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px 20px;margin-bottom:12px">
-        <div><span style="font:var(--text-caption);color:var(--text-tertiary)">電話</span><div style="font:var(--text-body);color:var(--text-primary);margin-top:2px">${esc(q.phone)}</div></div>
-        ${q.email?`<div><span style="font:var(--text-caption);color:var(--text-tertiary)">Email</span><div style="font:var(--text-body);color:var(--text-primary);margin-top:2px">${esc(q.email)}</div></div>`:''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px 24px;padding:12px 0;border-top:1px solid var(--border-subtle);border-bottom:${q.msg?'1px solid var(--border-subtle)':'none'}">
+        <div>
+          <span style="font:var(--text-caption);color:var(--text-tertiary);display:block;margin-bottom:2px">聯絡電話</span>
+          <a href="tel:${esc(q.phone)}" style="font:var(--text-body);color:var(--brand);font-weight:var(--fw-medium);text-decoration:none">${esc(q.phone)}</a>
+        </div>
+        ${q.email?`<div><span style="font:var(--text-caption);color:var(--text-tertiary);display:block;margin-bottom:2px">Email</span><a href="mailto:${esc(q.email)}" style="font:var(--text-body);color:var(--brand);text-decoration:none">${esc(q.email)}</a></div>`:''}
       </div>
-      ${q.msg?`<div style="padding:12px;background:var(--surface-sunken);border-radius:var(--radius-sm);font:var(--text-body-sm);color:var(--text-secondary);line-height:1.8">${esc(q.msg)}</div>`:''}
-    </div>`).join('');
+      ${q.msg?`<div style="padding:12px 14px;background:var(--surface-sunken);border-radius:var(--radius-sm);margin-top:10px;font:var(--text-body-sm);color:var(--text-secondary);line-height:1.8">${esc(q.msg)}</div>`:''}
+    </div>`;
+  }).join('');
+  initIcons();
 }
+
+/* Cycle through status: 待聯絡 → 已聯絡 → 已成交 → 待聯絡 */
+function cycleStatus(id){
+  const cycle=['待聯絡','已聯絡','已成交'];
+  const idx=enquiries.findIndex(q=>q.id===id);
+  if(idx<0)return;
+  const cur=enquiries[idx].status||'待聯絡';
+  const next=cycle[(cycle.indexOf(cur)+1)%cycle.length];
+  enquiries[idx].status=next;
+  saveData('ss_enquiries',enquiries);
+  renderEnquiries(window._currentFilter||'all');
+}
+
+function deleteEnquiry(id){
+  if(!confirm('確定刪除此筆客戶資料？'))return;
+  enquiries=enquiries.filter(q=>q.id!==id);
+  saveData('ss_enquiries',enquiries);
+  renderEnquiries(window._currentFilter||'all');
+}
+
+function filterEnquiries(filter,btn){
+  window._currentFilter=filter;
+  // Update filter button styles
+  document.querySelectorAll('.filter-btn').forEach(b=>{
+    const isActive=b.dataset.filter===filter;
+    b.style.background=isActive?'var(--brand)':'none';
+    b.style.color=isActive?'#fff':'var(--text-secondary)';
+    b.style.borderColor=isActive?'var(--brand)':'var(--border-default)';
+  });
+  renderEnquiries(filter);
+}
+
 function clearEnquiries(){
-  if(!confirm('確定清除所有諮詢紀錄？'))return;
-  enquiries=[];saveData('ss_enquiries',[]);renderEnquiries();
+  if(!confirm('確定清除所有客戶資料？此操作無法復原。'))return;
+  enquiries=[];saveData('ss_enquiries',[]);window._currentFilter='all';renderEnquiries('all');
 }
 
 // ══════════════════════════════════════════════════════
