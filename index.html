@@ -921,6 +921,57 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
 </div>
 
 <script>
+/* Standalone login handler — defined immediately, independent of main script */
+(function(){
+  function openLoginModal(){
+    var m=document.getElementById('login-modal');
+    if(m){m.style.display='flex';}
+    var err=document.getElementById('login-error'); if(err)err.style.display='none';
+    var u=document.getElementById('login-user'); if(u)u.value='';
+    var p=document.getElementById('login-pass'); if(p)p.value='';
+    if(window.lucide&&lucide.createIcons)lucide.createIcons();
+  }
+  function closeLoginModal(){
+    var m=document.getElementById('login-modal'); if(m)m.style.display='none';
+  }
+  function _loginHash(str){
+    var h1=5381,h2=0;
+    for(var i=0;i<str.length;i++){
+      var c=str.charCodeAt(i);
+      h1=((h1*33)^c)>>>0;
+      h2=(c+(h2<<6)+(h2<<16)-h2)>>>0;
+    }
+    return ('00000000'+h1.toString(16)).slice(-8)+('00000000'+h2.toString(16)).slice(-8);
+  }
+  function handleLogin(e){
+    if(e&&e.preventDefault)e.preventDefault();
+    var u=document.getElementById('login-user').value;
+    var p=document.getElementById('login-pass').value;
+    var _s='k7Qx9mP2wL5nR8vT';
+    if(_loginHash(_s+u)==='25161461072d216c'&&_loginHash(_s+p)==='1914400c597f0c17'){
+      closeLoginModal();
+      window.isAdmin=true;
+      if(typeof setAdminUI==='function')setAdminUI(true);
+      var adminBtns=document.querySelectorAll('.btn-admin');
+      adminBtns.forEach(function(b){
+        b.innerHTML='<i data-lucide="log-out" style="width:14px;height:14px"></i>登出';
+        b.onclick=function(){ if(typeof adminLogout==='function'){adminLogout();} };
+      });
+      if(window.lucide&&lucide.createIcons)lucide.createIcons();
+      if(typeof navigate==='function'&&typeof currentRoute!=='undefined')navigate(currentRoute);
+    }else{
+      var err=document.getElementById('login-error'); if(err)err.style.display='block';
+    }
+    return false;
+  }
+  // Expose globally — these win because this runs and the main script reuses same names
+  window.openLoginModal=openLoginModal;
+  window.closeLoginModal=closeLoginModal;
+  window.handleLogin=handleLogin;
+})();
+</script>
+
+<script>
 // ══════════════════════════════════════════════════════
 //  STATE
 // ══════════════════════════════════════════════════════
