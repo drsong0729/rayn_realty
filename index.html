@@ -862,7 +862,7 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
       </div>
       <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:var(--space-2)">
         <button class="btn btn-outline" onclick="closeListingModal()">取消</button>
-        <button class="btn btn-primary" onclick="saveListing()" style="padding:12px 28px">上架</button>
+        <button class="btn btn-primary" id="listing-save-btn" style="padding:12px 28px">上架</button>
       </div>
     </div>
   </div>
@@ -1475,12 +1475,16 @@ function openListingModal(){
   ['lst-type','lst-district','lst-zone','lst-parking','lst-park-access','lst-park-form']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
   document.getElementById('parking-sub').classList.remove('show');
+  document.getElementById('parking-sub').style.display='none';
+  // Reset save button to new-listing mode
+  const btn=document.getElementById('listing-save-btn');
+  if(btn){btn.textContent='上架';btn.onclick=saveListing;}
   document.getElementById('listing-modal').style.display='flex';
   initIcons();
 }
 function closeListingModal(){
   document.getElementById('listing-modal').style.display='none';
-  const btn=document.querySelector('#listing-modal .btn-primary');
+  const btn=document.getElementById('listing-save-btn');
   if(btn){btn.textContent='上架';btn.onclick=saveListing;}
 }
 
@@ -1690,8 +1694,8 @@ function editListing(id){
   }else{
     document.getElementById('parking-sub').style.display='none';
   }
-  // Change save button
-  const saveBtn=document.querySelector('#listing-modal .btn-primary[onclick="saveListing()"]');
+  // Switch save button to edit mode
+  const saveBtn=document.getElementById('listing-save-btn');
   if(saveBtn){saveBtn.textContent='儲存修改';saveBtn.onclick=()=>saveListingEdit(id);}
   document.getElementById('listing-modal').style.display='flex';
   initIcons();
