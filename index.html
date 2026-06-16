@@ -9,6 +9,40 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+<!-- Firebase SDK (compat build for simple global usage) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+/* ════════════════════════════════════════════════════════
+   FIREBASE 設定 — 請把下面的 firebaseConfig 換成你自己的專案設定
+   （從 Firebase 控制台 → 專案設定 → 你的應用程式 取得）
+   ════════════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyDr3eWxIwppv4-waMw3kGs-eEjT7D_HiDs",
+  authDomain: "ryan-realty-f9c84.firebaseapp.com",
+  projectId: "ryan-realty-f9c84",
+  storageBucket: "ryan-realty-f9c84.firebasestorage.app",
+  messagingSenderId: "354581302269",
+  appId: "1:354581302269:web:83658b70ba65e302546794",
+  measurementId: "G-Q3C93NL2N7"
+};
+
+let fbDB=null, FIREBASE_READY=false;
+(function(){
+  try{
+    if(firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('貼上')!==0){
+      firebase.initializeApp(firebaseConfig);
+      fbDB=firebase.firestore();
+      FIREBASE_READY=true;
+      console.log('[Firebase] 已連線（Firestore 免費方案）');
+    }else{
+      console.warn('[Firebase] 尚未設定 firebaseConfig，目前以本機儲存模式運作');
+    }
+  }catch(err){
+    console.error('[Firebase] 初始化失敗，改用本機儲存：',err.message);
+  }
+})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box}
 :root{
@@ -990,10 +1024,130 @@ let currentRoute='home';
 let drawerOpen=false;
 let isAdmin=false;
 
-// Persistent storage using localStorage
-function loadData(key){try{return JSON.parse(localStorage.getItem(key)||'[]');}catch{return[];}}
-function saveData(key,arr){localStorage.setItem(key,JSON.stringify(arr));}
+// ══════════════════════════════════════════════════════
+//  資料層：本機快取 + Firebase 雲端同步
+//  - 讀取：先回傳記憶體快取（同步），背景從雲端更新
+//  - 寫入：先更新快取，再寫入雲端
+// ══════════════════════════════════════════════════════
+const COLL = {ss_articles:'articles', ss_listings:'listings', ss_enquiries:'enquiries'};
+let _cache = {ss_articles:[], ss_listings:[], ss_enquiries:[]};
 
+// 同步讀取（從記憶體快取）
+function loadData(key){ return _cache[key] ? _cache[key].slice() : []; }
+
+// 寫入：更新快取 + 雲端
+function saveData(key,arr){
+  _cache[key]=arr.slice();
+  // 同時備份到 localStorage（離線後援）
+  try{ localStorage.setItem(key,JSON.stringify(arr)); }catch(e){}
+  // 寫入 Firebase
+  if(FIREBASE_READY && COLL[key]){
+    syncToFirebase(key,arr);
+  }
+  return true;
+}
+
+// 把整個陣列同步到 Firestore（每筆一份文件，用 id 當 doc id）
+async function syncToFirebase(key,arr){
+  if(!FIREBASE_READY)return;
+  try{
+    const coll=fbDB.collection(COLL[key]);
+    // 取得雲端現有的 id，找出要刪除的
+    const snap=await coll.get();
+    const cloudIds=new Set();
+    snap.forEach(d=>cloudIds.add(d.id));
+    const localIds=new Set(arr.map(x=>String(x.id)));
+    // 刪除雲端多餘的
+    const batch=fbDB.batch();
+    cloudIds.forEach(id=>{ if(!localIds.has(id)) batch.delete(coll.doc(id)); });
+    // 寫入/更新每一筆
+    arr.forEach(item=>{ batch.set(coll.doc(String(item.id)), item); });
+    await batch.commit();
+  }catch(err){
+    console.error('[Firebase] 同步失敗 ('+key+'):',err.message);
+    if(/exceed|quota|too large|size/i.test(err.message||'')){
+      alert('雲端儲存失敗：單筆資料過大（通常是照片）。\n系統已自動壓縮，若仍失敗請減少照片數量。');
+    }
+  }
+}
+
+// 啟動時從 Firebase 載入所有資料到快取
+async function loadAllFromFirebase(){
+  if(!FIREBASE_READY){
+    // 沒設定 Firebase → 用 localStorage
+    Object.keys(COLL).forEach(key=>{
+      try{ _cache[key]=JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ _cache[key]=[]; }
+    });
+    return;
+  }
+  for(const key of Object.keys(COLL)){
+    try{
+      const snap=await fbDB.collection(COLL[key]).get();
+      const items=[];
+      snap.forEach(d=>items.push(d.data()));
+      // 依 id（時間戳）排序，新的在前
+      items.sort((a,b)=>(b.id||0)-(a.id||0));
+      _cache[key]=items;
+      try{ localStorage.setItem(key,JSON.stringify(items)); }catch(e){}
+    }catch(err){
+      console.error('[Firebase] 載入失敗 ('+key+'):',err.message);
+      try{ _cache[key]=JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ _cache[key]=[]; }
+    }
+  }
+  // 重新渲染目前畫面
+  if(typeof renderHomeArticles==='function')renderHomeArticles();
+  if(typeof renderHomeListings==='function')renderHomeListings();
+  if(typeof currentRoute!=='undefined'){
+    if(currentRoute==='knowledge'&&typeof renderArticles==='function')renderArticles();
+    if(currentRoute==='listings'&&typeof renderListings==='function')renderListings();
+    if(currentRoute==='enquiries'&&typeof renderEnquiries==='function')renderEnquiries();
+  }
+}
+
+/* Compress an image File into a small base64 JPEG (max ~1280px, quality 0.7) */
+function compressImage(file,maxDim,quality){
+  maxDim=maxDim||1280; quality=quality||0.7;
+  return new Promise(function(resolve){
+    const reader=new FileReader();
+    reader.onload=function(e){
+      const img=new Image();
+      img.onload=function(){
+        let w=img.width,h=img.height;
+        if(w>h){ if(w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;} }
+        else { if(h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;} }
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,w,h);
+        try{
+          resolve(canvas.toDataURL('image/jpeg',quality));
+        }catch(err){
+          resolve(e.target.result); // fallback to original
+        }
+      };
+      img.onerror=function(){resolve(e.target.result);};
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* 照片以壓縮後的 base64 直接存入 Firestore（免費方案，不需 Storage）。
+   注意：Firestore 單筆文件上限 1MB，照片過多會超量。*/
+async function uploadPhotos(base64Arr, listingId){
+  return base64Arr; // 直接回傳 base64，存進 Firestore
+}
+
+/* 估算一筆物件資料的大小（位元組），避免超過 Firestore 1MB 上限 */
+function estimateSize(obj){
+  try{ return new Blob([JSON.stringify(obj)]).size; }
+  catch(e){ return JSON.stringify(obj).length; }
+}
+
+// 先用 localStorage 快取初始化（之後 Firebase 會覆蓋）
+Object.keys(COLL).forEach(function(key){
+  try{ _cache[key]=JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ _cache[key]=[]; }
+});
 let articles=loadData('ss_articles');
 let listings=loadData('ss_listings');
 let enquiries=loadData('ss_enquiries');
@@ -1380,17 +1534,14 @@ function insertArticleImages(input){
   const files=Array.from(input.files);
   const editor=document.getElementById('art-content');
   editor.focus();
-  let pending=files.length;
   files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
+    compressImage(file,1280,0.7).then(function(dataUrl){
+      editor.focus();
       document.execCommand('insertHTML',false,
-        `<img src="${e.target.result}" style="max-width:100%;height:auto;border-radius:6px;margin:8px 0;display:block" />`);
-      pending--;
-      if(pending===0){input.value='';}
-    };
-    reader.readAsDataURL(file);
+        '<img src="'+dataUrl+'" style="max-width:100%;height:auto;border-radius:6px;margin:8px 0;display:block" />');
+    });
   });
+  input.value='';
 }
 
 /* Insert videos from file picker (base64 embed) */
@@ -1593,15 +1744,19 @@ function toggleParking(val){
 
 function previewListingPhotos(input){
   const files=Array.from(input.files);
+  if(files.length===0)return;
   let pending=files.length;
   files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      listingPhotosTemp.push(e.target.result);
+    compressImage(file,900,0.62).then(function(dataUrl){
+      listingPhotosTemp.push(dataUrl);
       pending--;
       if(pending===0)renderPhotoGrid();
-    };reader.readAsDataURL(file);
+    });
   });
+  input.value='';
+  if(listingPhotosTemp.length>8){
+    setTimeout(function(){alert('提醒：照片較多（'+listingPhotosTemp.length+' 張）。\n雲端免費方案單筆上限 1MB，建議控制在 6-8 張，以免上架失敗。');},300);
+  }
 }
 function renderPhotoGrid(){
   const preview=document.getElementById('listing-photo-preview');
@@ -1628,13 +1783,19 @@ function removePhoto(idx){
 }
 
 function gv(id){const el=document.getElementById(id);return el?el.value.trim():'';}
-function saveListing(){
+async function saveListing(){
   const district=gv('lst-district');const type=gv('lst-type');const price=gv('lst-price');
   if(!district||!type||!price){alert('請填寫行政區、類型與總價');return;}
   const parking=gv('lst-parking');
+  const btn=document.getElementById('listing-save-btn');
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='上架中…';btn.disabled=true;}
+  const id=Date.now();
+  // 照片上傳到 Storage（雲端模式），取得網址
+  const photos=await uploadPhotos([...listingPhotosTemp], id);
   const lst={
-    id:Date.now(),
-    photos:[...listingPhotosTemp],
+    id,
+    photos,
     name:gv('lst-name'),type,district,layout:gv('lst-layout'),
     price:gv('lst-price'),unitPrice:gv('lst-unit-price').replace('萬/坪','').trim(),
     regArea:gv('lst-reg-area'),mainArea:gv('lst-main-area'),publicArea:gv('lst-public-area'),
@@ -1645,7 +1806,16 @@ function saveListing(){
     features:gv('lst-features'),
     date:new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'})
   };
-  listings.unshift(lst);saveData('ss_listings',listings);
+  // 檢查單筆大小（Firestore 上限 1MB）
+  const sz=estimateSize(lst);
+  if(FIREBASE_READY && sz>950000){
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    alert('此物件資料過大（約 '+Math.round(sz/1024)+'KB），超過雲端單筆 1MB 上限。\n請減少照片數量（建議 6-8 張）後再上架。');
+    return;
+  }
+  listings.unshift(lst);
+  saveData('ss_listings',listings);
+  if(btn){btn.textContent=origText;btn.disabled=false;}
   closeListingModal();renderListings();renderHomeListings();
 }
 
@@ -1818,15 +1988,20 @@ function editListing(id){
   initIcons();
 }
 
-function saveListingEdit(id){
+async function saveListingEdit(id){
   const district=gv('lst-district'),type=gv('lst-type'),price=gv('lst-price');
   if(!district||!type||!price){alert('請填寫行政區、類型與總價');return;}
   const idx=listings.findIndex(l=>l.id===id);
   if(idx<0)return;
   const parking=gv('lst-parking');
+  const btn=document.getElementById('listing-save-btn');
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.textContent='儲存中…';btn.disabled=true;}
+  // 上傳照片到 Storage（已是網址的舊照片會原樣保留）
+  const photos=await uploadPhotos([...listingPhotosTemp], id);
   listings[idx]={
     ...listings[idx],
-    photos:[...listingPhotosTemp],
+    photos,
     name:gv('lst-name'),type,district,layout:gv('lst-layout'),
     price,unitPrice:gv('lst-unit-price').replace('萬/坪','').trim(),
     regArea:gv('lst-reg-area'),mainArea:gv('lst-main-area'),publicArea:gv('lst-public-area'),
@@ -1836,7 +2011,14 @@ function saveListingEdit(id){
     parkForm:parking==='有'?gv('lst-park-form'):'',
     features:gv('lst-features'),
   };
+  const szE=estimateSize(listings[idx]);
+  if(FIREBASE_READY && szE>950000){
+    if(btn){btn.textContent=origText;btn.disabled=false;}
+    alert('此物件資料過大（約 '+Math.round(szE/1024)+'KB），超過雲端單筆 1MB 上限。\n請減少照片數量（建議 6-8 張）後再儲存。');
+    return;
+  }
   saveData('ss_listings',listings);
+  if(btn){btn.textContent=origText;btn.disabled=false;}
   closeListingModal();renderListings();renderHomeListings();
 }
 
@@ -1891,7 +2073,7 @@ document.addEventListener('keydown',e=>{
 // ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
-waitForLucide(()=>{initIcons();renderHomeArticles();renderHomeListings();initViewCount();});
+waitForLucide(()=>{initIcons();renderHomeArticles();renderHomeListings();initViewCount();loadAllFromFirebase();});
 
 /* ── View counter ── */
 function initViewCount(){
