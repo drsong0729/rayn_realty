@@ -1093,12 +1093,20 @@ async function handleLogin(e){
   e.preventDefault();
   const u=document.getElementById('login-user').value;
   const p=document.getElementById('login-pass').value;
-  // Credential verification via SHA-256 + random salt (salt rotates each build)
-  const _s='57c08aedfc0ebc96614b787c8940481b';
-  const _uh='e7e71c046144e2d9b3ad16e314268f8f6b799fe6781d5b158c689ee120d6c169';
-  const _ph='055f9fda7054c1e3752739775f42b9e6bdc9c3638197b9940255b24c673ed896';
-  async function _h(str){const b=new TextEncoder().encode(str);const d=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');}
-  const [uHash,pHash]=await Promise.all([_h(_s+u),_h(_s+p)]);
+  // Credential verification via salted hash (pure JS, works in any environment)
+  const _s='k7Qx9mP2wL5nR8vT';
+  const _uh='25161461072d216c';
+  const _ph='1914400c597f0c17';
+  function _h(str){
+    let h1=5381,h2=0;
+    for(let i=0;i<str.length;i++){
+      const c=str.charCodeAt(i);
+      h1=((h1*33)^c)>>>0;
+      h2=(c+(h2<<6)+(h2<<16)-h2)>>>0;
+    }
+    return ('00000000'+h1.toString(16)).slice(-8)+('00000000'+h2.toString(16)).slice(-8);
+  }
+  const uHash=_h(_s+u),pHash=_h(_s+p);
   if(uHash===_uh&&pHash===_ph){
     closeLoginModal();
     setAdminUI(true);
