@@ -769,25 +769,43 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
         </div>
         <div class="form-group">
           <label class="form-label">格局</label>
-          <input class="form-input" id="lst-layout" type="text" placeholder="例：3房2廳2衛" />
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;align-items:end">
+            <div>
+              <div style="font:var(--text-caption);color:var(--text-tertiary);margin-bottom:4px;text-align:center">房</div>
+              <input class="form-input" id="lst-room" type="number" min="0" max="20" placeholder="0" style="text-align:center;padding:10px 6px" oninput="updateLayout()"/>
+            </div>
+            <div>
+              <div style="font:var(--text-caption);color:var(--text-tertiary);margin-bottom:4px;text-align:center">廳</div>
+              <input class="form-input" id="lst-hall" type="number" min="0" max="10" placeholder="0" style="text-align:center;padding:10px 6px" oninput="updateLayout()"/>
+            </div>
+            <div>
+              <div style="font:var(--text-caption);color:var(--text-tertiary);margin-bottom:4px;text-align:center">衛</div>
+              <input class="form-input" id="lst-bath" type="number" min="0" max="10" placeholder="0" style="text-align:center;padding:10px 6px" oninput="updateLayout()"/>
+            </div>
+            <div>
+              <div style="font:var(--text-caption);color:var(--text-tertiary);margin-bottom:4px;text-align:center">陽台</div>
+              <input class="form-input" id="lst-balc" type="number" min="0" max="10" placeholder="0" style="text-align:center;padding:10px 6px" oninput="updateLayout()"/>
+            </div>
+          </div>
+          <input type="hidden" id="lst-layout" />
         </div>
       </div>
       <!-- Price -->
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">總價（萬元）*</label>
-          <input class="form-input" id="lst-price" type="number" placeholder="例：1680" />
+          <input class="form-input" id="lst-price" type="number" placeholder="例：1680" oninput="updateUnitPrice()" />
         </div>
         <div class="form-group">
-          <label class="form-label">單價（萬/坪）</label>
-          <input class="form-input" id="lst-unit-price" type="number" placeholder="例：35" />
+          <label class="form-label">單價（萬/坪）<span style="font:var(--text-caption);color:var(--text-tertiary);margin-left:6px">自動計算</span></label>
+          <input class="form-input" id="lst-unit-price" type="text" placeholder="輸入總價與登記坪數後自動計算" readonly style="background:var(--surface-sunken);color:var(--text-secondary);cursor:default" />
         </div>
       </div>
       <!-- Area -->
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">登記坪數</label>
-          <input class="form-input" id="lst-reg-area" type="number" placeholder="坪" step="0.01"/>
+          <input class="form-input" id="lst-reg-area" type="number" placeholder="坪" step="0.01" oninput="updateUnitPrice()" />
         </div>
         <div class="form-group">
           <label class="form-label">主建物坪數</label>
@@ -814,7 +832,12 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">樓層</label>
-          <input class="form-input" id="lst-floor" type="text" placeholder="例：12F / 共15F" />
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px">
+            <input class="form-input" id="lst-floor-cur" type="number" min="0" max="200" placeholder="所在樓層" style="text-align:center" oninput="updateFloor()"/>
+            <span style="color:var(--text-tertiary);font-weight:var(--fw-medium)">/</span>
+            <input class="form-input" id="lst-floor-total" type="number" min="0" max="200" placeholder="總樓層" style="text-align:center" oninput="updateFloor()"/>
+          </div>
+          <input type="hidden" id="lst-floor" />
         </div>
         <div class="form-group">
           <label class="form-label">管理費（元/月）</label>
@@ -864,7 +887,6 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
         <button class="btn btn-outline" onclick="closeListingModal()">取消</button>
         <button class="btn btn-primary" id="listing-save-btn" style="padding:12px 28px">上架</button>
       </div>
-    </div>
   </div>
 </div>
 
@@ -1470,7 +1492,8 @@ function openListingModal(){
   document.getElementById('listing-photo-preview').innerHTML='';
   document.getElementById('listing-photo-input').value='';
   ['lst-name','lst-layout','lst-price','lst-unit-price','lst-reg-area','lst-main-area',
-   'lst-public-area','lst-floor','lst-mgmt','lst-elementary','lst-middle','lst-features']
+   'lst-public-area','lst-floor','lst-mgmt','lst-elementary','lst-middle','lst-features',
+   'lst-room','lst-hall','lst-bath','lst-balc','lst-floor-cur','lst-floor-total']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   ['lst-type','lst-district','lst-zone','lst-parking','lst-park-access','lst-park-form']
     .forEach(id=>{const el=document.getElementById(id);if(el)el.selectedIndex=0;});
@@ -1539,7 +1562,7 @@ function saveListing(){
     id:Date.now(),
     photos:[...listingPhotosTemp],
     name:gv('lst-name'),type,district,layout:gv('lst-layout'),
-    price:gv('lst-price'),unitPrice:gv('lst-unit-price'),
+    price:gv('lst-price'),unitPrice:gv('lst-unit-price').replace('萬/坪','').trim(),
     regArea:gv('lst-reg-area'),mainArea:gv('lst-main-area'),publicArea:gv('lst-public-area'),
     zone:gv('lst-zone'),floor:gv('lst-floor'),mgmt:gv('lst-mgmt'),
     elementary:gv('lst-elementary'),middle:gv('lst-middle'),
@@ -1680,7 +1703,27 @@ function editListing(id){
     .forEach(fid=>{const el=document.getElementById(fid);if(el)el.value=l[fid.replace('lst-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]||'';});
   // Map field IDs to listing keys manually for the tricky ones
   const setV=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
-  setV('lst-name',l.name);setV('lst-layout',l.layout);setV('lst-price',l.price);
+  setV('lst-name',l.name);setV('lst-price',l.price);
+  // Parse stored layout back into spinners
+  if(l.layout){
+    const rm=l.layout.match(/(\d+)房/); const hl=l.layout.match(/(\d+)廳/);
+    const bt=l.layout.match(/(\d+)衛/); const bl=l.layout.match(/(\d+)陽台/);
+    if(rm)setV('lst-room',rm[1]); if(hl)setV('lst-hall',hl[1]);
+    if(bt)setV('lst-bath',bt[1]); if(bl)setV('lst-balc',bl[1]);
+    setV('lst-layout',l.layout);
+  }
+  // Parse stored floor back into cur/total spinners
+  if(l.floor){
+    const fm=l.floor.match(/(\d+)F\s*\/\s*共(\d+)F/);
+    const fcm=l.floor.match(/^(\d+)F/);
+    const ftm=l.floor.match(/共(\d+)F/);
+    if(fm){setV('lst-floor-cur',fm[1]);setV('lst-floor-total',fm[2]);}
+    else if(fcm){setV('lst-floor-cur',fcm[1]);}
+    else if(ftm){setV('lst-floor-total',ftm[1]);}
+    setV('lst-floor',l.floor);
+  }
+  // Populate unit price display
+  if(l.unitPrice){setV('lst-unit-price',l.unitPrice+'萬/坪');}
   setV('lst-unit-price',l.unitPrice);setV('lst-reg-area',l.regArea);
   setV('lst-main-area',l.mainArea);setV('lst-public-area',l.publicArea);
   setV('lst-floor',l.floor);setV('lst-mgmt',l.mgmt);
@@ -1711,7 +1754,7 @@ function saveListingEdit(id){
     ...listings[idx],
     photos:[...listingPhotosTemp],
     name:gv('lst-name'),type,district,layout:gv('lst-layout'),
-    price,unitPrice:gv('lst-unit-price'),
+    price,unitPrice:gv('lst-unit-price').replace('萬/坪','').trim(),
     regArea:gv('lst-reg-area'),mainArea:gv('lst-main-area'),publicArea:gv('lst-public-area'),
     zone:gv('lst-zone'),floor:gv('lst-floor'),mgmt:gv('lst-mgmt'),
     elementary:gv('lst-elementary'),middle:gv('lst-middle'),
@@ -1730,6 +1773,31 @@ function esc(s){
   if(!s)return'';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function updateLayout(){
+  const r=parseInt(document.getElementById('lst-room')?.value)||0;
+  const h=parseInt(document.getElementById('lst-hall')?.value)||0;
+  const b=parseInt(document.getElementById('lst-bath')?.value)||0;
+  const bl=parseInt(document.getElementById('lst-balc')?.value)||0;
+  const parts=[];
+  if(r)parts.push(r+'房');if(h)parts.push(h+'廳');
+  if(b)parts.push(b+'衛');if(bl)parts.push(bl+'陽台');
+  const hidden=document.getElementById('lst-layout');
+  if(hidden)hidden.value=parts.join('');
+}
+function updateFloor(){
+  const cur=document.getElementById('lst-floor-cur')?.value||'';
+  const total=document.getElementById('lst-floor-total')?.value||'';
+  const hidden=document.getElementById('lst-floor');
+  if(hidden)hidden.value=cur&&total?cur+'F / 共'+total+'F':cur?cur+'F':total?'共'+total+'F':'';
+}
+function updateUnitPrice(){
+  const price=parseFloat(document.getElementById('lst-price')?.value)||0;
+  const area=parseFloat(document.getElementById('lst-reg-area')?.value)||0;
+  const unitEl=document.getElementById('lst-unit-price');
+  if(!unitEl)return;
+  unitEl.value=(price>0&&area>0)?(price/area).toFixed(2)+'萬/坪':'';
+}
+function gv(id){const el=document.getElementById(id);return el?el.value.trim():'';}
 
 // Modal backdrop click handlers
 ['login-modal','publish-modal','listing-modal','article-detail-modal','listing-detail-modal'].forEach(id=>{
