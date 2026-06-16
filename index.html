@@ -173,9 +173,29 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
 .img-upload-area{border:2px dashed var(--border-default);border-radius:var(--radius-md);padding:var(--space-7);text-align:center;cursor:pointer;transition:border-color var(--dur-fast),background var(--dur-fast)}
 .img-upload-area:hover{border-color:var(--gold-500);background:var(--gold-100)}
 .img-preview-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
-.img-thumb{position:relative;aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden}
-.img-thumb img{width:100%;height:100%;object-fit:cover}
+.img-thumb{position:relative;aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden;cursor:move}
+.img-thumb img{width:100%;height:100%;object-fit:cover;pointer-events:none}
 .img-thumb-del{position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.6);border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;line-height:1}
+.img-thumb-cover{position:absolute;bottom:0;left:0;right:0;background:var(--gold-500);color:var(--ink-900);font-size:10px;font-weight:var(--fw-semibold);text-align:center;padding:2px 0;letter-spacing:0.04em}
+.img-thumb.is-cover{outline:2.5px solid var(--gold-500);outline-offset:-1px}
+/* Listing detail photo carousel */
+.photo-carousel{position:relative;overflow:hidden;border-radius:var(--radius-lg);margin-bottom:var(--space-6);background:var(--surface-sunken)}
+.photo-carousel-track{display:flex;transition:transform 0.35s var(--ease-out)}
+.photo-carousel-track img{flex:none;width:100%;height:340px;object-fit:cover;cursor:zoom-in}
+.carousel-btn{position:absolute;top:50%;transform:translateY(-50%);background:rgba(15,34,49,0.55);border:none;border-radius:50%;width:40px;height:40px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;z-index:2;transition:background var(--dur-fast)}
+.carousel-btn:hover{background:rgba(15,34,49,0.85)}
+.carousel-btn.prev{left:10px}.carousel-btn.next{right:10px}
+.carousel-dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:5px}
+.carousel-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.5);border:none;cursor:pointer;padding:0;transition:background var(--dur-fast)}
+.carousel-dot.active{background:#fff}
+/* Lightbox */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;display:flex;align-items:center;justify-content:center}
+.lightbox img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:4px}
+.lightbox-close{position:absolute;top:16px;right:20px;background:none;border:none;color:#fff;font-size:28px;cursor:pointer;line-height:1;padding:4px}
+.lightbox-prev,.lightbox-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;font-size:26px;cursor:pointer;padding:8px 14px;border-radius:4px;transition:background var(--dur-fast)}
+.lightbox-prev:hover,.lightbox-next:hover{background:rgba(255,255,255,0.3)}
+.lightbox-prev{left:16px}.lightbox-next{right:16px}
+@media(max-width:768px){.photo-carousel-track img{height:220px!important}}
 .parking-sub{padding-left:var(--space-6);display:none}
 .parking-sub.show{display:grid}
 @media(max-width:768px){
@@ -612,9 +632,13 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
         <span style="font:var(--text-body-sm);color:var(--text-on-dark-dim)">realty@supersun.com.tw</span>
       </div>
     </div>
-    <div style="padding-top:var(--space-5);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font:var(--text-caption);color:var(--stone-500)">
+    <div style="padding-top:var(--space-5);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;font:var(--text-caption);color:var(--stone-500)">
       <span>© 2026 日勝國際不動產有限公司　經紀業特許字號：高市地政字第11331226700號　經紀人：張勝明(95)高市字第11331226900號</span>
-      <span style="letter-spacing:0.1em">陪您走過安心買賣的路</span>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:5px"><i data-lucide="eye" style="width:12px;height:12px;opacity:0.6"></i>今日 <span id="footer-today" style="font-family:var(--font-mono);color:var(--navy-300)">-</span></span>
+        <span style="display:inline-flex;align-items:center;gap:5px"><i data-lucide="users" style="width:12px;height:12px;opacity:0.6"></i>總計 <span id="footer-total" style="font-family:var(--font-mono);color:var(--navy-300)">-</span></span>
+        <span style="letter-spacing:0.1em">陪您走過安心買賣的路</span>
+      </div>
     </div>
   </div>
 </footer>
@@ -1225,7 +1249,12 @@ function openPublishModal(){
   editor.onselectionchange=updateToolbarState;
   initIcons();
 }
-function closePublishModal(){document.getElementById('publish-modal').style.display='none';}
+function closePublishModal(){
+  document.getElementById('publish-modal').style.display='none';
+  // Reset button to publish mode
+  const btn=document.querySelector('#publish-modal .btn-primary');
+  if(btn){btn.textContent='發佈';btn.onclick=publishArticle;}
+}
 
 function execCmd(cmd,val){
   document.getElementById('art-content').focus();
@@ -1293,7 +1322,12 @@ function publishArticle(){
   if(!title||!content||content==='<br>'){alert('請填寫標題與內容');return;}
   const tag=document.getElementById('art-tag').value;
   const summary=document.getElementById('art-summary').value.trim();
-  const art={id:Date.now(),title,tag,summary,content,date:new Date().toLocaleDateString('zh-TW',{year:'numeric',month:'2-digit',timeZone:'Asia/Taipei'}).replace('/','.')};
+  const now=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const tz=d=>new Date(d.toLocaleString('en-US',{timeZone:'Asia/Taipei'}));
+  const t=tz(now);
+  const artDate=`${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  const art={id:Date.now(),title,tag,summary,content,date:artDate};
   articles.unshift(art);
   saveData('ss_articles',articles);
   closePublishModal();
@@ -1318,6 +1352,7 @@ function renderArticles(){
         <span style="font:var(--text-caption);color:var(--text-tertiary);font-family:var(--font-mono)">${esc(a.date)}</span>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:var(--fs-sm);color:var(--gold-600);font-weight:var(--fw-medium)">閱讀 →</span>
+          ${isAdmin?`<button onclick="event.stopPropagation();editArticle(${a.id})" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:2px" title="編輯"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>`:''}
           ${isAdmin?`<button onclick="event.stopPropagation();deleteArticle(${a.id})" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:2px" title="刪除"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>`:''}
         </div>
       </div>
@@ -1329,8 +1364,11 @@ function viewArticle(id){
   const a=articles.find(x=>x.id===id);
   if(!a)return;
   document.getElementById('article-detail-content').innerHTML=`
-    <span style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);color:#fff;background:var(--gold-600);padding:4px 10px;border-radius:var(--radius-pill)">${esc(a.tag)}</span>
-    <h2 style="font:var(--text-h2);margin:16px 0 8px">${esc(a.title)}</h2>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <span style="font-size:var(--fs-2xs);font-weight:var(--fw-medium);color:#fff;background:var(--gold-600);padding:4px 10px;border-radius:var(--radius-pill)">${esc(a.tag)}</span>
+      ${isAdmin?`<button onclick="editArticle(${a.id})" style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:6px 14px;font-size:var(--fs-sm);cursor:pointer;font-family:var(--font-sans);color:var(--text-secondary)"><i data-lucide="pencil" style="width:14px;height:14px"></i>編輯文章</button>`:''}
+    </div>
+    <h2 style="font:var(--text-h2);margin:0 0 8px">${esc(a.title)}</h2>
     <p style="font:var(--text-caption);color:var(--text-tertiary);font-family:var(--font-mono);margin-bottom:24px">${esc(a.date)}</p>
     <div style="font:var(--text-body);color:var(--text-primary);line-height:1.9;border-top:1px solid var(--border-subtle);padding-top:24px">${a.content}</div>`;
   document.getElementById('article-detail-modal').style.display='flex';
@@ -1340,6 +1378,42 @@ function deleteArticle(id){
   if(!confirm('確定刪除此文章？'))return;
   articles=articles.filter(a=>a.id!==id);
   saveData('ss_articles',articles);
+  renderArticles();renderHomeArticles();
+}
+
+function editArticle(id){
+  const a=articles.find(x=>x.id===id);if(!a)return;
+  // Close detail modal if open
+  document.getElementById('article-detail-modal').style.display='none';
+  // Pre-fill publish modal
+  document.getElementById('art-title').value=a.title;
+  document.getElementById('art-summary').value=a.summary||'';
+  document.getElementById('art-tag').value=a.tag;
+  document.getElementById('art-content').innerHTML=a.content;
+  const editor=document.getElementById('art-content');
+  editor.onkeyup=updateToolbarState;
+  editor.onmouseup=updateToolbarState;
+  // Change publish button to save edit
+  const publishBtn=document.querySelector('#publish-modal .btn-primary[onclick="publishArticle()"]');
+  if(publishBtn){
+    publishBtn.textContent='儲存修改';
+    publishBtn.onclick=()=>saveArticleEdit(id);
+  }
+  document.getElementById('publish-modal').style.display='flex';
+  initIcons();
+}
+function saveArticleEdit(id){
+  const title=document.getElementById('art-title').value.trim();
+  const content=document.getElementById('art-content').innerHTML.trim();
+  if(!title||!content||content==='<br>'){alert('請填寫標題與內容');return;}
+  const idx=articles.findIndex(a=>a.id===id);
+  if(idx<0)return;
+  articles[idx].title=title;
+  articles[idx].tag=document.getElementById('art-tag').value;
+  articles[idx].summary=document.getElementById('art-summary').value.trim();
+  articles[idx].content=content;
+  saveData('ss_articles',articles);
+  closePublishModal();
   renderArticles();renderHomeArticles();
 }
 
@@ -1404,7 +1478,11 @@ function openListingModal(){
   document.getElementById('listing-modal').style.display='flex';
   initIcons();
 }
-function closeListingModal(){document.getElementById('listing-modal').style.display='none';}
+function closeListingModal(){
+  document.getElementById('listing-modal').style.display='none';
+  const btn=document.querySelector('#listing-modal .btn-primary');
+  if(btn){btn.textContent='上架';btn.onclick=saveListing;}
+}
 
 function toggleParking(val){
   const sub=document.getElementById('parking-sub');
@@ -1414,28 +1492,38 @@ function toggleParking(val){
 
 function previewListingPhotos(input){
   const files=Array.from(input.files);
-  const preview=document.getElementById('listing-photo-preview');
+  let pending=files.length;
   files.forEach(file=>{
     const reader=new FileReader();
     reader.onload=e=>{
       listingPhotosTemp.push(e.target.result);
-      const idx=listingPhotosTemp.length-1;
-      const div=document.createElement('div');div.className='img-thumb';
-      div.innerHTML=`<img src="${e.target.result}"><button class="img-thumb-del" onclick="removePhoto(${idx})">✕</button>`;
-      preview.appendChild(div);
+      pending--;
+      if(pending===0)renderPhotoGrid();
     };reader.readAsDataURL(file);
   });
 }
-function removePhoto(idx){
-  listingPhotosTemp.splice(idx,1);
-  // Re-render previews
+function renderPhotoGrid(){
   const preview=document.getElementById('listing-photo-preview');
   preview.innerHTML='';
   listingPhotosTemp.forEach((src,i)=>{
-    const div=document.createElement('div');div.className='img-thumb';
-    div.innerHTML=`<img src="${src}"><button class="img-thumb-del" onclick="removePhoto(${i})">✕</button>`;
+    const div=document.createElement('div');
+    div.className='img-thumb'+(i===0?' is-cover':'');
+    div.title=i===0?'封面照片（點選其他照片更換封面）':'點擊設為封面';
+    div.innerHTML=`<img src="${src}"><button class="img-thumb-del" onclick="event.stopPropagation();removePhoto(${i})">✕</button>${i===0?'<div class=\"img-thumb-cover\">封面</div>':''}`;
+    div.onclick=()=>setCover(i);
     preview.appendChild(div);
   });
+}
+function setCover(idx){
+  if(idx===0)return;
+  // Move selected photo to front
+  const [photo]=listingPhotosTemp.splice(idx,1);
+  listingPhotosTemp.unshift(photo);
+  renderPhotoGrid();
+}
+function removePhoto(idx){
+  listingPhotosTemp.splice(idx,1);
+  renderPhotoGrid();
 }
 
 function gv(id){const el=document.getElementById(id);return el?el.value.trim():'';}
@@ -1483,36 +1571,90 @@ function renderListings(){
           ${l.regArea?`<span class="badge badge-gold">${esc(l.regArea)}坪</span>`:''}
           ${l.parking==='有'?`<span class="badge badge-navy">有車位</span>`:''}
         </div>
-        ${isAdmin?`<button onclick="event.stopPropagation();deleteListing(${l.id})" style="background:none;border:none;cursor:pointer;color:var(--text-tertiary);padding:4px 0;margin-top:10px;font-size:var(--fs-sm);display:flex;align-items:center;gap:4px"><i data-lucide="trash-2" style="width:13px;height:13px"></i>下架</button>`:''}
+        ${isAdmin?`<div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="event.stopPropagation();editListing(${l.id})" style="background:none;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-secondary);padding:4px 10px;font-size:var(--fs-xs);display:inline-flex;align-items:center;gap:4px;font-family:var(--font-sans)"><i data-lucide="pencil" style="width:12px;height:12px"></i>編輯</button>
+          <button onclick="event.stopPropagation();deleteListing(${l.id})" style="background:none;border:1px solid var(--border-default);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-secondary);padding:4px 10px;font-size:var(--fs-xs);display:inline-flex;align-items:center;gap:4px;font-family:var(--font-sans)"><i data-lucide="trash-2" style="width:12px;height:12px"></i>下架</button>
+        </div>`:''}
       </div>
     </div>`;
   }).join('');
   initIcons();
 }
 
+/* ── Carousel helpers ── */
+let carPositions={};
+function carMove(cid,dir){
+  const track=document.getElementById(cid+'-track');
+  if(!track)return;
+  const total=track.children.length;
+  carPositions[cid]=((carPositions[cid]||0)+dir+total)%total;
+  carGoTo(cid,carPositions[cid]);
+}
+function carGoTo(cid,idx){
+  carPositions[cid]=idx;
+  const track=document.getElementById(cid+'-track');
+  if(track)track.style.transform=`translateX(-${idx*100}%)`;
+  const dotsEl=document.getElementById(cid+'-dots');
+  if(dotsEl){
+    dotsEl.querySelectorAll('.carousel-dot').forEach((d,i)=>d.classList.toggle('active',i===idx));
+  }
+}
+
+function openLightbox(photos,startIdx){
+  let cur=startIdx||0;
+  const lb=document.createElement('div');lb.className='lightbox';
+  const render=()=>{
+    lb.innerHTML=`
+      <button class="lightbox-close" onclick="this.closest('.lightbox').remove()">✕</button>
+      <img src="${photos[cur]}" />
+      ${photos.length>1?`<button class="lightbox-prev" onclick="event.stopPropagation();lbGo(-1)">&#8249;</button><button class="lightbox-next" onclick="event.stopPropagation();lbGo(1)">&#8250;</button>`:''}
+    `;
+  };
+  window.lbGo=(dir)=>{cur=(cur+dir+photos.length)%photos.length;render();};
+  lb.onclick=(e)=>{if(e.target===lb)lb.remove();};
+  document.body.appendChild(lb);render();
+}
+
 function viewListing(id){
   const l=listings.find(x=>x.id===id);if(!l)return;
-  const photos=l.photos&&l.photos.length?
-    `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-bottom:var(--space-6)">
-      ${l.photos.map(p=>`<img src="${p}" style="width:100%;height:160px;object-fit:cover;border-radius:var(--radius-md)">`).join('')}
-    </div>`:
-    `<div style="height:180px;background:var(--surface-sunken);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-6)"><i data-lucide="building-2" style="width:40px;height:40px;color:var(--text-tertiary)"></i></div>`;
-  const row=(label,val)=>val?`<div><span style="font:var(--text-caption);color:var(--text-tertiary)">${label}</span><div style="font:var(--text-body);color:var(--text-primary);margin-top:2px">${esc(val)}</div></div>`:'';
-  const parkingInfo=l.parking==='有'?`有車位（${esc(l.parkAccess)}·${esc(l.parkForm)}）`:'無車位';
-  document.getElementById('listing-detail-content').innerHTML=`
-    ${photos}
-    ${l.name?`<div style="font:var(--text-caption);color:var(--text-accent);letter-spacing:0.06em;margin-bottom:4px">${esc(l.name)}</div>`:''}
-    <h2 style="font:var(--text-h2);margin-bottom:4px">${esc(l.district)} · ${esc(l.type)}</h2>
-    <div style="font:var(--text-display);color:var(--brand);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);margin-bottom:var(--space-6)">${esc(l.price)} 萬</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;padding:var(--space-6) 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-6)">
-      ${row('格局',l.layout)}${row('樓層',l.floor)}${row('登記坪數',l.regArea?l.regArea+'坪':'')}
-      ${row('主建物坪數',l.mainArea?l.mainArea+'坪':'')}${row('公設建坪',l.publicArea?l.publicArea+'坪':'')}
-      ${row('單價',l.unitPrice?l.unitPrice+'萬/坪':'')}${row('使用分區',l.zone)}
-      ${row('車位',parkingInfo)}${row('管理費',l.mgmt?l.mgmt+'元/月':'無')}
-      ${row('學區 國小',l.elementary)}${row('學區 國中',l.middle)}
-    </div>
-    ${l.features?`<div><div style="font:var(--text-body-sm);color:var(--text-tertiary);margin-bottom:6px">環境特色</div><p style="font:var(--text-body);color:var(--text-secondary);line-height:1.8">${esc(l.features)}</p></div>`:''}
-    <div style="margin-top:var(--space-7)"><button class="btn btn-primary btn-lg" onclick="navigate('contact');document.getElementById('listing-detail-modal').style.display='none'" style="display:inline-flex;align-items:center;gap:8px">聯繫洽詢此物件 <i data-lucide="phone" style="width:17px;height:17px"></i></button></div>`;
+  const hasPhotos=l.photos&&l.photos.length>0;
+  const photos=hasPhotos?l.photos:[];
+  const carouselId='car-'+id;
+  const photosHtml=hasPhotos?
+    '<div class="photo-carousel" id="'+carouselId+'">'
+    +'<div class="photo-carousel-track" id="'+carouselId+'-track" style="transform:translateX(0)">'
+    +photos.map((p,i)=>'<img src="'+p+'" alt="物件照片 '+(i+1)+'" onclick="openLightbox(listingPhotosForView,'+i+')">').join('')
+    +'</div>'
+    +(photos.length>1
+      ?'<button class="carousel-btn prev" onclick="carMove(\''+carouselId+'\',-1)">&#8249;</button>'
+       +'<button class="carousel-btn next" onclick="carMove(\''+carouselId+'\',1)">&#8250;</button>'
+       +'<div class="carousel-dots" id="'+carouselId+'-dots">'
+       +photos.map((_,i)=>'<button class="carousel-dot'+(i===0?' active':'')+'" onclick="carGoTo(\''+carouselId+'\','+i+')"></button>').join('')
+       +'</div>'
+      :'')
+    +'</div>'
+    :'<div style="height:180px;background:var(--surface-sunken);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-6)"><i data-lucide="building-2" style="width:40px;height:40px;color:var(--text-tertiary)"></i></div>';
+  window.listingPhotosForView=photos;
+  const row=(label,val)=>val?'<div><span style="font:var(--text-caption);color:var(--text-tertiary)">'+label+'</span><div style="font:var(--text-body);color:var(--text-primary);margin-top:2px">'+esc(val)+'</div></div>':'';
+  const parkingInfo=l.parking==='有'?'有車位（'+esc(l.parkAccess)+'·'+esc(l.parkForm)+'）':'無車位';
+  const editBtn=isAdmin?'<button onclick="editListing('+l.id+')" style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-sunken);border:1px solid var(--border-default);border-radius:var(--radius-sm);padding:12px 20px;font-size:var(--fs-base);cursor:pointer;font-family:var(--font-sans);color:var(--text-secondary)"><i data-lucide="pencil" style="width:16px;height:16px"></i>編輯物件</button>':'';
+  document.getElementById('listing-detail-content').innerHTML=
+    photosHtml
+    +(l.name?'<div style="font:var(--text-caption);color:var(--text-accent);letter-spacing:0.06em;margin-bottom:4px">'+esc(l.name)+'</div>':'')
+    +'<h2 style="font:var(--text-h2);margin-bottom:4px">'+esc(l.district)+' · '+esc(l.type)+'</h2>'
+    +'<div style="font:var(--text-display);color:var(--brand);font-size:var(--fs-2xl);font-weight:var(--fw-semibold);margin-bottom:var(--space-6)">'+esc(l.price)+' 萬</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px;padding:var(--space-6) 0;border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);margin-bottom:var(--space-6)">'
+    +row('格局',l.layout)+row('樓層',l.floor)+row('登記坪數',l.regArea?l.regArea+'坪':'')
+    +row('主建物坪數',l.mainArea?l.mainArea+'坪':'')+row('公設建坪',l.publicArea?l.publicArea+'坪':'')
+    +row('單價',l.unitPrice?l.unitPrice+'萬/坪':'')+row('使用分區',l.zone)
+    +row('車位',parkingInfo)+row('管理費',l.mgmt?l.mgmt+'元/月':'無')
+    +row('學區 國小',l.elementary)+row('學區 國中',l.middle)
+    +'</div>'
+    +(l.features?'<div><div style="font:var(--text-body-sm);color:var(--text-tertiary);margin-bottom:6px">環境特色</div><p style="font:var(--text-body);color:var(--text-secondary);line-height:1.8">'+esc(l.features)+'</p></div>':'')
+    +'<div style="margin-top:var(--space-7);display:flex;gap:12px;flex-wrap:wrap">'
+    +'<button class="btn btn-primary btn-lg" onclick="navigate(\'contact\');document.getElementById(\'listing-detail-modal\').style.display=\'none\'" style="display:inline-flex;align-items:center;gap:8px">聯繫洽詢此物件 <i data-lucide="phone" style="width:17px;height:17px"></i></button>'
+    +editBtn
+    +'</div>';
   document.getElementById('listing-detail-modal').style.display='flex';
   initIcons();
 }
@@ -1521,6 +1663,60 @@ function deleteListing(id){
   if(!confirm('確定下架此物件？'))return;
   listings=listings.filter(l=>l.id!==id);
   saveData('ss_listings',listings);renderListings();renderHomeListings();
+}
+
+function editListing(id){
+  const l=listings.find(x=>x.id===id);if(!l)return;
+  document.getElementById('listing-detail-modal').style.display='none';
+  // Pre-fill all fields
+  listingPhotosTemp=[...l.photos];
+  renderPhotoGrid();
+  ['lst-name','lst-layout','lst-price','lst-unit-price','lst-reg-area','lst-main-area',
+   'lst-public-area','lst-floor','lst-mgmt','lst-elementary','lst-middle','lst-features']
+    .forEach(fid=>{const el=document.getElementById(fid);if(el)el.value=l[fid.replace('lst-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]||'';});
+  // Map field IDs to listing keys manually for the tricky ones
+  const setV=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
+  setV('lst-name',l.name);setV('lst-layout',l.layout);setV('lst-price',l.price);
+  setV('lst-unit-price',l.unitPrice);setV('lst-reg-area',l.regArea);
+  setV('lst-main-area',l.mainArea);setV('lst-public-area',l.publicArea);
+  setV('lst-floor',l.floor);setV('lst-mgmt',l.mgmt);
+  setV('lst-elementary',l.elementary);setV('lst-middle',l.middle);setV('lst-features',l.features);
+  const setS=(fid,val)=>{const el=document.getElementById(fid);if(el)el.value=val||'';};
+  setS('lst-type',l.type);setS('lst-district',l.district);setS('lst-zone',l.zone);
+  setS('lst-parking',l.parking);
+  if(l.parking==='有'){
+    document.getElementById('parking-sub').style.display='grid';
+    setS('lst-park-access',l.parkAccess);setS('lst-park-form',l.parkForm);
+  }else{
+    document.getElementById('parking-sub').style.display='none';
+  }
+  // Change save button
+  const saveBtn=document.querySelector('#listing-modal .btn-primary[onclick="saveListing()"]');
+  if(saveBtn){saveBtn.textContent='儲存修改';saveBtn.onclick=()=>saveListingEdit(id);}
+  document.getElementById('listing-modal').style.display='flex';
+  initIcons();
+}
+
+function saveListingEdit(id){
+  const district=gv('lst-district'),type=gv('lst-type'),price=gv('lst-price');
+  if(!district||!type||!price){alert('請填寫行政區、類型與總價');return;}
+  const idx=listings.findIndex(l=>l.id===id);
+  if(idx<0)return;
+  const parking=gv('lst-parking');
+  listings[idx]={
+    ...listings[idx],
+    photos:[...listingPhotosTemp],
+    name:gv('lst-name'),type,district,layout:gv('lst-layout'),
+    price,unitPrice:gv('lst-unit-price'),
+    regArea:gv('lst-reg-area'),mainArea:gv('lst-main-area'),publicArea:gv('lst-public-area'),
+    zone:gv('lst-zone'),floor:gv('lst-floor'),mgmt:gv('lst-mgmt'),
+    elementary:gv('lst-elementary'),middle:gv('lst-middle'),
+    parking,parkAccess:parking==='有'?gv('lst-park-access'):'',
+    parkForm:parking==='有'?gv('lst-park-form'):'',
+    features:gv('lst-features'),
+  };
+  saveData('ss_listings',listings);
+  closeListingModal();renderListings();renderHomeListings();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1549,7 +1745,24 @@ document.addEventListener('keydown',e=>{
 // ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
-waitForLucide(()=>{initIcons();renderHomeArticles();renderHomeListings();});
+waitForLucide(()=>{initIcons();renderHomeArticles();renderHomeListings();initViewCount();});
+
+/* ── View counter ── */
+function initViewCount(){
+  const today=new Date().toISOString().slice(0,10);
+  let vc;
+  try{vc=JSON.parse(localStorage.getItem('ss_views')||'{"total":0,"date":"","today":0}');}
+  catch{vc={total:0,date:'',today:0};}
+  vc.total=(vc.total||0)+1;
+  if(vc.date!==today){vc.date=today;vc.today=0;}
+  vc.today=(vc.today||0)+1;
+  localStorage.setItem('ss_views',JSON.stringify(vc));
+  const todayEl=document.getElementById('footer-today');
+  const totalEl=document.getElementById('footer-total');
+  if(todayEl)todayEl.textContent=vc.today.toLocaleString();
+  if(totalEl)totalEl.textContent=vc.total.toLocaleString();
+  initIcons();
+}
 </script>
 </body>
 </html>
