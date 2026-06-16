@@ -308,6 +308,19 @@ header.transparent{background:linear-gradient(180deg,rgba(15,34,49,0.55),rgba(15
     <div id="home-articles-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6)"></div>
   </section>
 
+  <!-- Listings preview (dynamic) -->
+  <section id="home-listings-section" style="max-width:var(--container-max);margin:0 auto;padding:var(--space-10) var(--gutter);display:none">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:var(--space-7);gap:24px;flex-wrap:wrap">
+      <div>
+        <span class="eyebrow">精選物件 · FEATURED</span>
+        <h2 style="font:var(--text-h2)">最新上架物件</h2>
+        <span class="rule"></span>
+      </div>
+      <button class="btn btn-ghost" onclick="navigate('listings')" style="display:inline-flex;align-items:center;gap:6px">查看全部 <i data-lucide="arrow-right" style="width:16px;height:16px"></i></button>
+    </div>
+    <div id="home-listings-grid" class="grid-3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-6)"></div>
+  </section>
+
   <!-- CTA Band -->
   <section style="background:var(--surface-dark)">
     <div style="max-width:var(--container-narrow);margin:0 auto;padding:var(--space-10) var(--gutter);text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px">
@@ -945,7 +958,7 @@ function navigate(id){
   if(id==='knowledge')renderArticles();
   if(id==='listings')renderListings();
   if(id==='enquiries')renderEnquiries();
-  if(id==='home')renderHomeArticles();
+  if(id==='home'){renderHomeArticles();renderHomeListings();}
   window.scrollTo(0,0);
   initIcons();
 }
@@ -1030,11 +1043,17 @@ function openLoginModal(){
   initIcons();
 }
 function closeLoginModal(){document.getElementById('login-modal').style.display='none';}
-function handleLogin(e){
+async function handleLogin(e){
   e.preventDefault();
   const u=document.getElementById('login-user').value;
   const p=document.getElementById('login-pass').value;
-  if(u==='drsong0729'&&p==='652560'){
+  // Credential verification via SHA-256 + random salt (salt rotates each build)
+  const _s='57c08aedfc0ebc96614b787c8940481b';
+  const _uh='e7e71c046144e2d9b3ad16e314268f8f6b799fe6781d5b158c689ee120d6c169';
+  const _ph='055f9fda7054c1e3752739775f42b9e6bdc9c3638197b9940255b24c673ed896';
+  async function _h(str){const b=new TextEncoder().encode(str);const d=await crypto.subtle.digest('SHA-256',b);return Array.from(new Uint8Array(d)).map(x=>x.toString(16).padStart(2,'0')).join('');}
+  const [uHash,pHash]=await Promise.all([_h(_s+u),_h(_s+p)]);
+  if(uHash===_uh&&pHash===_ph){
     closeLoginModal();
     setAdminUI(true);
     // Show enquiries button in header admin btn area — repurpose the btn-admin
@@ -1341,6 +1360,34 @@ function renderHomeArticles(){
     </article>`).join('');
 }
 
+function renderHomeListings(){
+  const section=document.getElementById('home-listings-section');
+  const grid=document.getElementById('home-listings-grid');
+  if(!section||!grid)return;
+  listings=loadData('ss_listings');
+  if(listings.length===0){section.style.display='none';return;}
+  section.style.display='block';
+  const preview=listings.slice(0,3);
+  grid.innerHTML=preview.map(l=>{
+    const thumb=l.photos&&l.photos.length
+      ?`<img src="${l.photos[0]}" style="width:100%;height:200px;object-fit:cover">`
+      :`<div style="width:100%;height:200px;background:var(--surface-sunken);display:flex;align-items:center;justify-content:center"><i data-lucide="building-2" style="width:36px;height:36px;color:var(--text-tertiary)"></i></div>`;
+    return`<div class="listing-card card-hover" onclick="viewListing(${l.id})" style="cursor:pointer;background:var(--surface-card);border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow var(--dur-base),transform var(--dur-base)">
+      ${thumb}
+      <div style="padding:var(--space-5)">
+        ${l.name?`<div style="font:var(--text-caption);color:var(--text-accent);letter-spacing:0.06em;margin-bottom:4px">${esc(l.name)}</div>`:''}
+        <div style="font:var(--text-h4);font-weight:var(--fw-semibold);color:var(--text-primary);margin-bottom:6px">${esc(l.district)} · ${esc(l.type)}${l.layout?` · ${esc(l.layout)}`:''}</div>
+        <div style="font:var(--text-body-lg);color:var(--brand);font-weight:var(--fw-semibold)">${esc(l.price)} 萬</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+          ${l.floor?`<span class="badge badge-navy">${esc(l.floor)}</span>`:''}
+          ${l.regArea?`<span class="badge badge-gold">${esc(l.regArea)}坪</span>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  initIcons();
+}
+
 // ══════════════════════════════════════════════════════
 //  LISTINGS
 // ══════════════════════════════════════════════════════
@@ -1410,7 +1457,7 @@ function saveListing(){
     date:new Date().toLocaleDateString('zh-TW',{timeZone:'Asia/Taipei'})
   };
   listings.unshift(lst);saveData('ss_listings',listings);
-  closeListingModal();renderListings();
+  closeListingModal();renderListings();renderHomeListings();
 }
 
 function renderListings(){
@@ -1473,7 +1520,7 @@ function viewListing(id){
 function deleteListing(id){
   if(!confirm('確定下架此物件？'))return;
   listings=listings.filter(l=>l.id!==id);
-  saveData('ss_listings',listings);renderListings();
+  saveData('ss_listings',listings);renderListings();renderHomeListings();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1502,7 +1549,7 @@ document.addEventListener('keydown',e=>{
 // ══════════════════════════════════════════════════════
 //  INIT
 // ══════════════════════════════════════════════════════
-waitForLucide(()=>{initIcons();renderHomeArticles();});
+waitForLucide(()=>{initIcons();renderHomeArticles();renderHomeListings();});
 </script>
 </body>
 </html>
